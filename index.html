@@ -124,7 +124,7 @@
         </div>
       </div>
 
-      <p class="hint">Masukkan URL atau Teks.</p>
+      <p class="hint">Masukkan URL atau teks.</p>
 
       <div class="controls">
         <input id="inputLink" type="text" placeholder="Tempel/ketik URL (contoh: https://example.com)" value="" aria-label="URL untuk dikonversi" />
@@ -143,7 +143,7 @@
       </div>
 
       <footer>
-        Dibuat pinceee 2025.
+        Dibuat pinceeee 2025.
       </footer>
     </section>
 
@@ -166,10 +166,11 @@
 
   <div class="toast" id="toast"></div>
 
-  <!-- QRCode.js dari CDN (qrcodejs) -->
+  <!-- FIX DOWNLOAD: pastikan QR menghasilkan <img> untuk diunduh --> dari CDN (qrcodejs) -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <script>
-    // Elemen
+    // ===== FIX TOTAL: QR SELALU MUNCUL & BISA DIDOWNLOAD =====
+
     const inputLink = document.getElementById('inputLink');
     const genBtn = document.getElementById('genBtn');
     const qrcodeEl = document.getElementById('qrcode');
@@ -181,94 +182,72 @@
 
     let qr;
 
-    function showToast(text, timeout=2200){
-      toast.textContent = text; toast.style.display='block';
-      setTimeout(()=> toast.style.display='none', timeout);
+    function showToast(text, timeout = 2200) {
+      toast.textContent = text;
+      toast.style.display = 'block';
+      setTimeout(() => toast.style.display = 'none', timeout);
     }
 
-    function validateInput(text){
-      if(!text) return false;
-      // rudimentary URL check
-      try{
-        // allow plain text too, so only check if it looks like a URL
-        return true;
-      }catch(e){return false}
-    }
-
-    function generate(){
+    function generate() {
       const val = inputLink.value.trim();
-      if(!validateInput(val)){
-        showToast('Masukkan teks atau URL yang valid.');
+      if (!val) {
+        showToast('Masukkan link terlebih dahulu');
         return;
       }
 
-      // bersihkan area dulu
+      // Hapus QR lama
       qrcodeEl.innerHTML = '';
-      // buat QR baru
+
+      // Buat QR (pakai canvas langsung supaya stabil)
       qr = new QRCode(qrcodeEl, {
         text: val,
         width: 220,
         height: 220,
-        colorDark : "#111827",
-        colorLight : "#ffffff",
-        correctLevel : QRCode.CorrectLevel.H
+        correctLevel: QRCode.CorrectLevel.H
       });
 
-      metaText.textContent = val.length > 60 ? val.slice(0,60) + '...' : val;
-      showToast('QR Code berhasil dibuat');
+      metaText.textContent = val.length > 60 ? val.slice(0, 60) + '...' : val;
+      showToast('QR berhasil dibuat!');
     }
 
     genBtn.addEventListener('click', generate);
-    inputLink.addEventListener('keydown', (e)=>{ if(e.key === 'Enter') generate(); });
+    inputLink.addEventListener('keydown', e => { if (e.key === 'Enter') generate(); });
 
-    copyBtn.addEventListener('click', async ()=>{
+    copyBtn.addEventListener('click', async () => {
       const val = inputLink.value.trim();
-      if(!val){ showToast('Tidak ada link untuk disalin'); return }
-      try{ await navigator.clipboard.writeText(val); showToast('Link disalin'); }catch(e){ showToast('Gagal menyalin — gunakan Ctrl+C'); }
+      if (!val) return showToast('Tidak ada link untuk disalin');
+      await navigator.clipboard.writeText(val);
+      showToast('Link disalin');
     });
 
-    clearBtn.addEventListener('click', ()=>{ inputLink.value = ''; qrcodeEl.innerHTML='(Belum ada QR)'; metaText.textContent='QR preview akan muncul di sini'; showToast('Dikosongkan'); });
+    clearBtn.addEventListener('click', () => {
+      inputLink.value = '';
+      qrcodeEl.innerHTML = '(Belum ada QR)';
+      metaText.textContent = 'QR preview akan muncul di sini';
+      showToast('Dikosongkan');
+    });
 
-    downloadBtn.addEventListener('click', ()=>{
-      if(!qrcodeEl.querySelector('img') && !qrcodeEl.querySelector('canvas')){ showToast('Belum ada QR untuk di-download'); return }
+    // ===== FIX DOWNLOAD =====
+    downloadBtn.addEventListener('click', () => {
+      let canvas = qrcodeEl.querySelector('canvas');
 
-      // QRCode.js biasanya membuat <img> inside container. Jika tidak, handle table -> canvas
-      const img = qrcodeEl.querySelector('img');
-      if(img){
-        const src = img.src;
-        const a = document.createElement('a');
-        a.href = src;
-        a.download = 'pinceee-qrcode.png';
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-        showToast('Download dimulai');
+      if (!canvas) {
+        showToast('Belum ada QR untuk di-download');
         return;
       }
 
-      // kalau ada canvas (beberapa implementasi) -> toDataURL
-      const canvas = qrcodeEl.querySelector('canvas');
-      if(canvas){
-        const url = canvas.toDataURL('image/png');
-        const a = document.createElement('a'); a.href = url; a.download = 'pinceee-qrcode.png'; document.body.appendChild(a); a.click(); a.remove();
-        showToast('Download dimulai');
-        return;
-      }
+      const dataURL = canvas.toDataURL('image/png');
 
-      showToast('Tidak dapat menemukan gambar QR untuk didownload');
+      const a = document.createElement('a');
+      a.href = dataURL;
+      a.download = 'pinceee-qrcode.png';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+
+      showToast('QR berhasil diunduh!');
     });
 
-    // scanBtn hanya memberi instruksi singkat (implementasi scanner memerlukan akses kamera & library berbeda)
-    const scanBtnEl = document.getElementById('scanBtn');
-    scanBtnEl.addEventListener('click', ()=>{
-      showToast('Untuk memindai, gunakan aplikasi pemindai QR di ponsel atau kamera browser (fitur tambahan).');
-    });
-
-    // contoh placeholder agar pengguna mendapat contoh
-    (function setExample(){
-      inputLink.value = 'https://www.youtube.com/@FeriRmnsyah';
-      // jangan auto-generate agar pengguna tetap klik sendiri
-    })();
   </script>
 </body>
 </html>
